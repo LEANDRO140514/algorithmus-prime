@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://algorithmus.local/contracts/pipeline_event.schema.json",
+  "title": "Pipeline Event",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "pipeline_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "execution_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "trace_id": {
+      "type": ["string", "null"]
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "event_type": { "type": "string", "minLength": 1 },
+        "repository": { "type": "string", "minLength": 1 },
+        "branch": { "type": "string", "minLength": 1 },
+        "author": { "type": "string", "minLength": 1 },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "summary": { "type": "string" },
+        "changed_files": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "required": ["event_type", "repository", "branch", "author", "timestamp"]
+    }
+  },
+  "required": ["event"]
+}

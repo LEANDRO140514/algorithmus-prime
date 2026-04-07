@@ -1,0 +1,134 @@
+# GUARDIA
+
+Microservicio Flask para auditoría de seguridad pre-despliegue (Zero Trust) como **Security Gate** formal del pipeline.
+
+## Ejecutar local
+
+```bash
+pip install -r guardia/requirements.txt pip-audit bandit
+python guardia/app.py
+```
+
+## Endpoints
+
+- `GET /health`
+- `POST /audit`
+
+## Execution Context (multi-agente)
+
+- `schema_version`: fijo en `v1`.
+- `execution_id` y `correlation_id`: requeridos por el esquema; si no llegan, GUARDIA los completa para mantener compatibilidad.
+- Logs y respuesta incluyen siempre: `execution_id`, `correlation_id`, `agent`, `event`.
+
+## Seguridad y sandbox
+
+- `scan_target.repo_path` se valida contra `ALLOWED_SCAN_BASE` (default `/workspace`).
+- El contenedor corre como usuario **no-root** (`guardia`) en Dockerfile.
+- `network_checks` aplica validación de URL + whitelist de hosts (`ALLOWED_NETWORK_HOSTS`) + bloqueo de destinos privados (anti-SSRF).
+- Timeouts:
+  - global: `MAX_AUDIT_DURATION_SECONDS`
+  - network checks: `NETWORK_CHECK_TIMEOUT_SECONDS`
+
+## Recomendación de recursos
+
+```bash
+docker run --cpus=1 --memory=512m --pids-limit=256 --read-only ...
+```
+
+## Ejemplo request
+
+```json
+{
+  "schema_version": "v1",
+  "execution_id": "exec-001",
+  "correlation_id": "corr-001",
+  "pipeline_id": "pipe-123",
+  "event": {
+    "event_type": "push",
+    "repository": "acme/payments-api",
+    "branch": "main",
+    "author": "dev@acme.com",
+    "timestamp": "2026-02-22T10:00:00Z",
+    "summary": "feat: improve auth",
+    "changed_files": ["app/auth.py", "requirements.txt"],
+    "metadata": { "commit": "abc123" }
+  },
+  "scan_target": {
+    "repo_path": "/workspace/repo"
+  },
+  "policy": {
+    "fail_on_severity": ["critical", "high"],
+    "max_medium_findings": 10,
+    "require_no_secrets": true
+  },
+  "network_checks": {
+    "deploy_url": "https://example.com"
+  }
+}
+```
+
+## Ejemplo response
+
+```json
+{
+  "agent": "guardia",
+  "schema_version": "v1",
+  "status": "success",
+  "pipeline_id": "pipe-123",
+  "execution_id": "exec-001",
+  "correlation_id": "corr-001",
+  "deployment_allowed": false,
+  "security_status": "critical",
+  "risk_score": 74,
+  "decision_reason": "blocked_by_severity:high",
+  "deployment_token": null,
+  "policy_applied": {
+    "fail_on_severity": ["critical", "high"],
+    "max_medium_findings": 10,
+    "require_no_secrets": true
+  },
+  "report": {
+    "dependency_scan": {
+      "findings": [],
+      "summary": {
+        "total": 0,
+        "by_severity": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "unknown": 0
+        }
+      },
+      "skipped_reason": null
+    },
+    "secret_scan": {
+      "findings": [],
+      "recommended_env_vars": [],
+      "skipped_reason": null
+    },
+    "network_checks": {
+      "findings": [],
+      "results": {
+        "scheme": "https",
+        "dns_resolves": true,
+        "http_status": 200,
+        "reachable": true
+      },
+      "skipped_reason": null
+    }
+  },
+  "artifact_path": "artifacts/guardia/pipe-123_security.md",
+  "started_at": "2026-02-22T10:00:01Z",
+  "finished_at": "2026-02-22T10:00:04Z",
+  "duration_ms": 3044,
+  "trace": {
+    "request_id": "13bf84ce12af",
+    "timings_ms": {
+      "dependency_scan": 1420,
+      "secret_scan": 317,
+      "network_checks": 201
+    }
+  }
+}
+```
