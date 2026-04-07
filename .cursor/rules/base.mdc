@@ -1,0 +1,14 @@
+---
+description: ForgeClaw base engineering rules
+alwaysApply: true
+---
+
+# ForgeClaw Cursor Rules
+
+- Single source of truth: `/docs`
+- Read before coding: `docs/PRD.md`, `docs/tech-stack.md`, `docs/architecture.md`, `docs/decisions.md`
+- Keep changes small and reversible
+- No new dependency without writing rationale in `docs/decisions.md`
+- Do not change architecture boundaries without explicit approval
+- Every task must define acceptance criteria and test plan
+- If context is missing, ask first and avoid assumptions
